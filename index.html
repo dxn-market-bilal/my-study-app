@@ -483,12 +483,12 @@
     <!-- المحتوى الرئيسي -->
     <main>
         <div id="reorderBanner" class="reorder-banner hidden">
-            ✨ وضع الترتيب مفعّل: اسحب المهمة للمكان الجديد للتغيير!
+             وضع الترتيب مفعّل: اسحب المهمة للمكان الجديد للتغيير!
         </div>
 
         <section>
             <div class="section-header">
-                <div class="section-title">🔥 الأولويات الرئيسية (الامتحانات والواجبات)</div>
+                <div class="section-title">🔥 الأولويات الرئيسية</div>
                 <span id="essentialCount" class="task-count">0</span>
             </div>
             <div id="essentialList" class="task-list"></div>
@@ -496,7 +496,7 @@
 
         <section>
             <div class="section-header">
-                <div class="section-title">📘 الأولويات الثانوية (القراءة التمهيدية والمطالعة)</div>
+                <div class="section-title">📘 الأولويات الثانوية</div>
                 <span id="secondaryCount" class="task-count">0</span>
             </div>
             <div id="secondaryList" class="task-list"></div>
@@ -795,7 +795,7 @@
                         </div>
                         <div class="task-text">
                             <h3>${escapeHtml(t.title)}</h3>
-                            <div class="date-text">📅 ${escapeHtml(t.date || getFormattedDate())}</div>
+                            <div class="date-text">* ${escapeHtml(t.date || getFormattedDate())}</div>
                         </div>
                     </div>
                     
