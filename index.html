@@ -1,14 +1,22 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-
-    <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#080d1a">
-<link rel="apple-touch-icon" href="icon-192.png">
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>جدول الأولويات الدراسية</title>
+
+    <!-- ربط ملفات الـ PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#080d1a">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- تطبيق الوضع الفاتح فوراً قبل رسم الصفحة لمنع الوميض الأسود عند الريفرش -->
+    <script>
+        if (localStorage.getItem('study_app_theme') === 'light') {
+            document.documentElement.classList.add('light-theme');
+        }
+    </script>
+
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -27,7 +35,7 @@
             --modal-input-bg: #080d1a;
         }
 
-        body.light-theme {
+        :root.light-theme, html.light-theme, body.light-theme {
             --bg-body: #f8fafc;
             --bg-card: #ffffff;
             --bg-input: #f1f5f9;
@@ -171,7 +179,6 @@
             border-radius: 12px;
         }
 
-        /* شريط التنبيه عند تفعيل إعادة الترتيب */
         .reorder-banner {
             background-color: rgba(56, 189, 248, 0.15);
             border: 1px dashed var(--primary);
@@ -190,7 +197,6 @@
             100% { opacity: 0.7; }
         }
 
-        /* كارت المهمة */
         .task-card {
             background-color: var(--bg-card);
             border: 1px solid var(--border-color);
@@ -210,7 +216,6 @@
         .task-card.secondary { border-right: 5px solid var(--secondary-color); }
         .task-card.completed { opacity: 0.45; }
 
-        /* تأثيرات وضع إعادة الترتيب */
         .task-card.reorder-active {
             border-style: dashed;
             border-color: var(--primary);
@@ -308,7 +313,6 @@
             background-color: rgba(244, 63, 94, 0.1);
         }
 
-        /* النوافذ المنبثقة Modal Overlay */
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -478,7 +482,6 @@
 
     <!-- المحتوى الرئيسي -->
     <main>
-        <!-- تنبيه تفعيل إعادة الترتيب -->
         <div id="reorderBanner" class="reorder-banner hidden">
             ✨ وضع الترتيب مفعّل: اسحب المهمة للمكان الجديد للتغيير!
         </div>
@@ -542,7 +545,6 @@
         let selectedType = 'essential';
         let taskToDeleteId = null;
 
-        // متغيرات التحكم في الضغط المطول والسحب
         let longPressTimer = null;
         let isReordering = false;
         let draggedTaskId = null;
@@ -551,6 +553,7 @@
         window.onload = function() {
             const savedTheme = localStorage.getItem('study_app_theme');
             if (savedTheme === 'light') {
+                document.documentElement.classList.add('light-theme');
                 document.body.classList.add('light-theme');
                 updateThemeUI(true);
             }
@@ -559,11 +562,7 @@
             if (savedTasks) {
                 try { tasks = JSON.parse(savedTasks); } catch(e) { tasks = []; }
             } else {
-                tasks = [
-                    { id: '1', title: 'الامتحان الشهري (الكيمياء)', type: 'essential', date: getFormattedDate(), completed: false },
-                    { id: '2', title: 'الامتحان اليومي والتقرير', type: 'essential', date: getFormattedDate(), completed: false },
-                    { id: '3', title: 'قراءة المحاضرة قبل القاعة', type: 'secondary', date: getFormattedDate(), completed: false }
-                ];
+                tasks = [];
                 saveTasks();
             }
             renderTasks();
@@ -580,7 +579,8 @@
         }
 
         function toggleTheme() {
-            const isLight = document.body.classList.toggle('light-theme');
+            const isLight = document.documentElement.classList.toggle('light-theme');
+            document.body.classList.toggle('light-theme', isLight);
             localStorage.setItem('study_app_theme', isLight ? 'light' : 'dark');
             updateThemeUI(isLight);
         }
@@ -589,7 +589,6 @@
             document.getElementById('themeIcon').innerText = isLight ? '☀️' : '🌙';
         }
 
-        /* نافذة إضافة المهمة */
         function openAddModal() {
             document.getElementById('addModalOverlay').classList.remove('hidden');
             setTimeout(() => { document.getElementById('taskTitle').focus(); }, 100);
@@ -637,7 +636,6 @@
             }
         }
 
-        /* نافذة تأكيد الحذف */
         function promptDeleteTask(id) {
             taskToDeleteId = id;
             document.getElementById('deleteModalOverlay').classList.remove('hidden');
@@ -664,7 +662,6 @@
             }
         }
 
-        /* آلية الضغط المطول والسحب والإفلات الاحترافي */
         function handleStartPress(e, id) {
             if (e.target.closest('.checkbox') || e.target.closest('.btn-del')) return;
             
@@ -743,7 +740,6 @@
                 tasks.splice(mainToIndex, 0, movedItem);
 
                 saveTasks();
-                // إيقاف وضع الترتيب فور الانتهاء كما طَلَبْت
                 isReordering = false;
                 draggedTaskId = null;
                 renderTasks();
@@ -815,16 +811,15 @@
         }
     </script>
 
+    <!-- تسجيل الـ Service Worker لتفعيل الـ PWA -->
     <script>
-    // تسجيل الـ Service Worker لتفعيل الـ PWA
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
-                .then((reg) => console.log('تم تسجيل الـ Service Worker بنجاح:', reg.scope))
-                .catch((err) => console.error('فشل تسجيل الـ Service Worker:', err));
-        });
-    }
-</script>
-
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((reg) => console.log('تم تسجيل الـ Service Worker بنجاح:', reg.scope))
+                    .catch((err) => console.error('فشل تسجيل الـ Service Worker:', err));
+            });
+        }
+    </script>
 </body>
 </html>
