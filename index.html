@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+
+    <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#080d1a">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جدول الأولويات الدراسية</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #080d1a;
+            --bg-card: #111827;
+            --bg-input: #080d1a;
+            --border-color: #1f293d;
+            --text-main: #f1f5f9;
+            --text-sub: #94a3b8;
+            --primary: #38bdf8;
+            --primary-hover: #0284c7;
+            --essential-color: #f43f5e;
+            --secondary-color: #38bdf8;
+            --shadow-color: rgba(0, 0, 0, 0.4);
+            --modal-bg: #111827;
+            --modal-input-bg: #080d1a;
+        }
+
+        body.light-theme {
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-input: #f1f5f9;
+            --border-color: #e2e8f0;
+            --text-main: #0f172a;
+            --text-sub: #64748b;
+            --shadow-color: rgba(0, 0, 0, 0.08);
+            --modal-bg: #ffffff;
+            --modal-input-bg: #f1f5f9;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+            transition: background-color 0.25s, border-color 0.25s, color 0.25s;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px;
+            user-select: none;
+        }
+
+        .hidden { display: none !important; }
+
+        header {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-add-task {
+            background-color: var(--primary);
+            color: #080d1a;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-add-task:hover {
+            background-color: var(--primary-hover);
+            color: #ffffff;
+        }
+
+        .btn-theme-toggle {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px var(--shadow-color);
+        }
+
+        main {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-sub);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .task-count {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            color: var(--text-sub);
+        }
+
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 40px;
+        }
+
+        .empty-msg {
+            color: var(--text-sub);
+            font-size: 0.8rem;
+            padding: 14px;
+            text-align: center;
+            background-color: var(--bg-card);
+            border: 1px dashed var(--border-color);
+            border-radius: 12px;
+        }
+
+        /* شريط التنبيه عند تفعيل إعادة الترتيب */
+        .reorder-banner {
+            background-color: rgba(56, 189, 248, 0.15);
+            border: 1px dashed var(--primary);
+            color: var(--primary);
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            text-align: center;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+
+        /* كارت المهمة */
+        .task-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            cursor: pointer;
+            position: relative;
+            touch-action: manipulation;
+        }
+
+        .task-card.essential { border-right: 5px solid var(--essential-color); }
+        .task-card.secondary { border-right: 5px solid var(--secondary-color); }
+        .task-card.completed { opacity: 0.45; }
+
+        /* تأثيرات وضع إعادة الترتيب */
+        .task-card.reorder-active {
+            border-style: dashed;
+            border-color: var(--primary);
+            cursor: grab;
+            animation: shake 0.3s ease-in-out infinite alternate;
+        }
+
+        .task-card.dragging {
+            opacity: 0.3;
+        }
+
+        @keyframes shake {
+            0% { transform: rotate(-0.5deg); }
+            100% { transform: rotate(0.5deg); }
+        }
+
+        .drag-handle {
+            color: var(--primary);
+            font-size: 1.1rem;
+            font-weight: 900;
+            padding: 0 4px;
+            display: none;
+        }
+
+        .task-card.reorder-active .drag-handle {
+            display: inline-block;
+        }
+
+        .task-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .rank-number {
+            font-weight: 900;
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            background-color: var(--bg-input);
+            padding: 4px 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            min-width: 32px;
+            text-align: center;
+        }
+
+        .checkbox {
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            border: 2px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .checkbox.checked {
+            background-color: #10b981;
+            border-color: #10b981;
+            color: white;
+            font-size: 0.85rem;
+        }
+
+        .task-text h3 {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .task-card.completed .task-text h3 {
+            text-decoration: line-through;
+        }
+
+        .date-text {
+            font-size: 0.76rem;
+            color: var(--text-sub);
+            margin-top: 3px;
+        }
+
+        .btn-del {
+            background: none;
+            border: none;
+            color: var(--text-sub);
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 6px 8px;
+            border-radius: 8px;
+        }
+
+        .btn-del:hover {
+            color: #f43f5e;
+            background-color: rgba(244, 63, 94, 0.1);
+        }
+
+        /* النوافذ المنبثقة Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(8, 13, 26, 0.75);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 1000;
+        }
+
+        .modal-card {
+            background-color: var(--modal-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 20px 40px var(--shadow-color);
+            animation: modalFadeIn 0.2s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .modal-header h2 {
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: var(--text-main);
+        }
+
+        .modal-body-text {
+            color: var(--text-sub);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .btn-close-modal {
+            background: none;
+            border: none;
+            color: var(--text-sub);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            background-color: var(--modal-input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 14px;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary);
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .radio-btn {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 0.88rem;
+            font-weight: bold;
+            background-color: var(--modal-input-bg);
+            color: var(--text-sub);
+        }
+
+        .radio-btn.active-essential {
+            border: 1.5px solid #f43f5e;
+            color: #f43f5e;
+            background-color: rgba(244, 63, 94, 0.08);
+        }
+
+        .radio-btn.active-secondary {
+            border: 1.5px solid #38bdf8;
+            color: #38bdf8;
+            background-color: rgba(56, 189, 248, 0.08);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-submit {
+            flex: 1;
+            background-color: var(--primary);
+            color: #080d1a;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .btn-confirm-delete {
+            flex: 1;
+            background-color: #f43f5e;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .btn-cancel {
+            flex: 1;
+            background-color: var(--modal-input-bg);
+            color: var(--text-sub);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- الشريط العلوي -->
+    <header>
+        <div class="logo">
+            <span>📚</span>
+            <span>جدول الأولويات الدراسية</span>
+        </div>
+        <div class="header-actions">
+            <button onclick="openAddModal()" class="btn-add-task">+ مهمة</button>
+            <button id="themeToggleBtn" onclick="toggleTheme()" class="btn-theme-toggle">
+                <span id="themeIcon">🌙</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- المحتوى الرئيسي -->
+    <main>
+        <!-- تنبيه تفعيل إعادة الترتيب -->
+        <div id="reorderBanner" class="reorder-banner hidden">
+            ✨ وضع الترتيب مفعّل: اسحب المهمة للمكان الجديد للتغيير!
+        </div>
+
+        <section>
+            <div class="section-header">
+                <div class="section-title">🔥 الأولويات الرئيسية (الامتحانات والواجبات)</div>
+                <span id="essentialCount" class="task-count">0</span>
+            </div>
+            <div id="essentialList" class="task-list"></div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <div class="section-title">📘 الأولويات الثانوية (القراءة التمهيدية والمطالعة)</div>
+                <span id="secondaryCount" class="task-count">0</span>
+            </div>
+            <div id="secondaryList" class="task-list"></div>
+        </section>
+    </main>
+
+    <!-- النافذة المنبثقة لإضافة مهمة -->
+    <div id="addModalOverlay" class="modal-overlay hidden" onclick="handleBackdropClick(event, 'addModalOverlay')">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>إضافة أولوية جديدة 🎯</h2>
+                <button class="btn-close-modal" onclick="closeAddModal()">✕</button>
+            </div>
+            <div class="form-group">
+                <input type="text" id="taskTitle" placeholder="اسم المهمة (مثلاً: امتحان كيمياء شهري)..." onkeypress="handleKeyPress(event)">
+                
+                <div class="radio-group">
+                    <div id="typeEssential" class="radio-btn active-essential" onclick="setType('essential')">🔥 أولوية رئيسية</div>
+                    <div id="typeSecondary" class="radio-btn" onclick="setType('secondary')">📘 أولوية ثانوية</div>
+                </div>
+
+                <button onclick="addTask()" class="btn-submit">تثبيت المهمة بالجدول</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- النافذة المنبثقة لتأكيد الحذف -->
+    <div id="deleteModalOverlay" class="modal-overlay hidden" onclick="handleBackdropClick(event, 'deleteModalOverlay')">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>تأكيد حذف المهمة ⚠️</h2>
+                <button class="btn-close-modal" onclick="closeDeleteModal()">✕</button>
+            </div>
+            <div class="modal-body-text">
+                هل أنت تأكد من رغبتك في حذف هذه المهمة من جدولك؟ لا يمكن التراجع عن هذه الخطوة.
+            </div>
+            <div class="modal-actions">
+                <button onclick="confirmDeleteTask()" class="btn-confirm-delete">حذف المهمة</button>
+                <button onclick="closeDeleteModal()" class="btn-cancel">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tasks = [];
+        let selectedType = 'essential';
+        let taskToDeleteId = null;
+
+        // متغيرات التحكم في الضغط المطول والسحب
+        let longPressTimer = null;
+        let isReordering = false;
+        let draggedTaskId = null;
+        let touchStartY = 0;
+
+        window.onload = function() {
+            const savedTheme = localStorage.getItem('study_app_theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-theme');
+                updateThemeUI(true);
+            }
+
+            const savedTasks = localStorage.getItem('study_priorities_v5');
+            if (savedTasks) {
+                try { tasks = JSON.parse(savedTasks); } catch(e) { tasks = []; }
+            } else {
+                tasks = [
+                    { id: '1', title: 'الامتحان الشهري (الكيمياء)', type: 'essential', date: getFormattedDate(), completed: false },
+                    { id: '2', title: 'الامتحان اليومي والتقرير', type: 'essential', date: getFormattedDate(), completed: false },
+                    { id: '3', title: 'قراءة المحاضرة قبل القاعة', type: 'secondary', date: getFormattedDate(), completed: false }
+                ];
+                saveTasks();
+            }
+            renderTasks();
+        };
+
+        function getFormattedDate() {
+            const now = new Date();
+            const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+            return `${now.getDate()} ${months[now.getMonth()]}`;
+        }
+
+        function saveTasks() {
+            localStorage.setItem('study_priorities_v5', JSON.stringify(tasks));
+        }
+
+        function toggleTheme() {
+            const isLight = document.body.classList.toggle('light-theme');
+            localStorage.setItem('study_app_theme', isLight ? 'light' : 'dark');
+            updateThemeUI(isLight);
+        }
+
+        function updateThemeUI(isLight) {
+            document.getElementById('themeIcon').innerText = isLight ? '☀️' : '🌙';
+        }
+
+        /* نافذة إضافة المهمة */
+        function openAddModal() {
+            document.getElementById('addModalOverlay').classList.remove('hidden');
+            setTimeout(() => { document.getElementById('taskTitle').focus(); }, 100);
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModalOverlay').classList.add('hidden');
+            document.getElementById('taskTitle').value = '';
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') addTask();
+        }
+
+        function setType(type) {
+            selectedType = type;
+            document.getElementById('typeEssential').className = type === 'essential' ? 'radio-btn active-essential' : 'radio-btn';
+            document.getElementById('typeSecondary').className = type === 'secondary' ? 'radio-btn active-secondary' : 'radio-btn';
+        }
+
+        function addTask() {
+            const titleInput = document.getElementById('taskTitle');
+            const title = titleInput.value.trim();
+            if (!title) return;
+
+            tasks.push({
+                id: Date.now().toString(),
+                title: title,
+                type: selectedType,
+                date: getFormattedDate(),
+                completed: false
+            });
+
+            saveTasks();
+            renderTasks();
+            closeAddModal();
+        }
+
+        function toggleComplete(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                saveTasks();
+                renderTasks();
+            }
+        }
+
+        /* نافذة تأكيد الحذف */
+        function promptDeleteTask(id) {
+            taskToDeleteId = id;
+            document.getElementById('deleteModalOverlay').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModalOverlay').classList.add('hidden');
+            taskToDeleteId = null;
+        }
+
+        function confirmDeleteTask() {
+            if (taskToDeleteId) {
+                tasks = tasks.filter(t => t.id !== taskToDeleteId);
+                saveTasks();
+                renderTasks();
+            }
+            closeDeleteModal();
+        }
+
+        function handleBackdropClick(event, modalId) {
+            if (event.target.id === modalId) {
+                if (modalId === 'addModalOverlay') closeAddModal();
+                if (modalId === 'deleteModalOverlay') closeDeleteModal();
+            }
+        }
+
+        /* آلية الضغط المطول والسحب والإفلات الاحترافي */
+        function handleStartPress(e, id) {
+            if (e.target.closest('.checkbox') || e.target.closest('.btn-del')) return;
+            
+            if (e.type === 'touchstart') {
+                touchStartY = e.touches[0].clientY;
+            }
+
+            longPressTimer = setTimeout(() => {
+                isReordering = true;
+                draggedTaskId = id;
+                if (navigator.vibrate) navigator.vibrate(50);
+                renderTasks();
+            }, 500);
+        }
+
+        function handleCancelPress(e) {
+            if (e.type === 'touchmove') {
+                const touchY = e.touches[0].clientY;
+                if (Math.abs(touchY - touchStartY) > 10 && !isReordering) {
+                    clearTimeout(longPressTimer);
+                }
+            } else {
+                clearTimeout(longPressTimer);
+            }
+        }
+
+        function handleDragStart(e, id) {
+            if (!isReordering) {
+                e.preventDefault();
+                return;
+            }
+            draggedTaskId = id;
+            e.dataTransfer.setData('text/plain', id);
+            e.currentTarget.classList.add('dragging');
+        }
+
+        function handleDragOver(e) {
+            if (!isReordering) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDrop(e, targetId) {
+            if (!isReordering || !draggedTaskId) return;
+            e.preventDefault();
+            
+            reorderTasks(draggedTaskId, targetId);
+        }
+
+        function handleTouchMove(e) {
+            if (!isReordering) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            const element = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (!element) return;
+            
+            const card = element.closest('.task-card');
+            if (card && card.dataset.id && card.dataset.id !== draggedTaskId) {
+                reorderTasks(draggedTaskId, card.dataset.id);
+            }
+        }
+
+        function handleTouchEnd() {
+            clearTimeout(longPressTimer);
+        }
+
+        function reorderTasks(fromId, toId) {
+            const draggedTask = tasks.find(t => t.id === fromId);
+            const targetTask = tasks.find(t => t.id === toId);
+
+            if (draggedTask && targetTask && draggedTask.type === targetTask.type && fromId !== toId) {
+                const mainFromIndex = tasks.findIndex(t => t.id === fromId);
+                const mainToIndex = tasks.findIndex(t => t.id === toId);
+
+                const [movedItem] = tasks.splice(mainFromIndex, 1);
+                tasks.splice(mainToIndex, 0, movedItem);
+
+                saveTasks();
+                // إيقاف وضع الترتيب فور الانتهاء كما طَلَبْت
+                isReordering = false;
+                draggedTaskId = null;
+                renderTasks();
+            }
+        }
+
+        function renderTasks() {
+            const essentialList = document.getElementById('essentialList');
+            const secondaryList = document.getElementById('secondaryList');
+            const reorderBanner = document.getElementById('reorderBanner');
+
+            if (isReordering) {
+                reorderBanner.classList.remove('hidden');
+            } else {
+                reorderBanner.classList.add('hidden');
+            }
+
+            const essentials = tasks.filter(t => t.type === 'essential');
+            const secondaries = tasks.filter(t => t.type === 'secondary');
+
+            document.getElementById('essentialCount').innerText = essentials.length;
+            document.getElementById('secondaryCount').innerText = secondaries.length;
+
+            essentialList.innerHTML = essentials.length === 0 
+                ? `<div class="empty-msg">لا توجد أولويات رئيسية حالياً</div>` 
+                : essentials.map((t, index) => createCard(t, index + 1)).join('');
+
+            secondaryList.innerHTML = secondaries.length === 0 
+                ? `<div class="empty-msg">لا توجد أولويات ثانوية حالياً</div>` 
+                : secondaries.map((t, index) => createCard(t, index + 1)).join('');
+        }
+
+        function createCard(t, rank) {
+            return `
+                <div class="task-card ${t.type} ${t.completed ? 'completed' : ''} ${isReordering ? 'reorder-active' : ''}"
+                     data-id="${t.id}"
+                     draggable="${isReordering}"
+                     onmousedown="handleStartPress(event, '${t.id}')"
+                     onmouseup="handleCancelPress(event)"
+                     onmouseleave="handleCancelPress(event)"
+                     ontouchstart="handleStartPress(event, '${t.id}')"
+                     ontouchmove="handleTouchMove(event)"
+                     ontouchend="handleTouchEnd()"
+                     ondragstart="handleDragStart(event, '${t.id}')"
+                     ondragover="handleDragOver(event)"
+                     ondrop="handleDrop(event, '${t.id}')">
+                    
+                    <div class="task-left">
+                        <span class="drag-handle">⋮⋮</span>
+                        <span class="rank-number">#${rank}</span>
+                        <div class="checkbox ${t.completed ? 'checked' : ''}" onclick="toggleComplete('${t.id}')">
+                            ${t.completed ? '✓' : ''}
+                        </div>
+                        <div class="task-text">
+                            <h3>${escapeHtml(t.title)}</h3>
+                            <div class="date-text">📅 ${escapeHtml(t.date || getFormattedDate())}</div>
+                        </div>
+                    </div>
+                    
+                    <button class="btn-del" onclick="promptDeleteTask('${t.id}')">✕</button>
+                </div>
+            `;
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>"']/g, function(m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+            });
+        }
+    </script>
+
+    <script>
+    // تسجيل الـ Service Worker لتفعيل الـ PWA
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then((reg) => console.log('تم تسجيل الـ Service Worker بنجاح:', reg.scope))
+                .catch((err) => console.error('فشل تسجيل الـ Service Worker:', err));
+        });
+    }
+</script>
+
+</body>
+</html>

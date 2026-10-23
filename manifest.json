@@ -1,0 +1,24 @@
+{
+  "name": "جدول الأولويات الدراسية",
+  "short_name": "الأولويات",
+  "description": "تطبيق متكامل لتنظيم وترتيب الأولويات والمهام الدراسية",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#080d1a",
+  "theme_color": "#38bdf8",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
