@@ -217,19 +217,13 @@
         .task-card.completed { opacity: 0.45; }
 
         .task-card.reorder-active {
-    border: 2px dashed var(--primary);
-    box-shadow: 0 0 18px rgba(56, 189, 248, 0.4); /* ظل مشع حول المهمة */
-    transform: scale(1.02); /* بروز بسيط للمهمة المحددة */
-    animation: shake 0.3s ease-in-out infinite alternate;
-}
+            border: 2px dashed var(--primary);
+            box-shadow: 0 0 18px rgba(56, 189, 248, 0.4);
+            transform: scale(1.02);
+        }
 
         .task-card.dragging {
             opacity: 0.3;
-        }
-
-        @keyframes shake {
-            0% { transform: rotate(-0.5deg); }
-            100% { transform: rotate(0.5deg); }
         }
 
         .drag-handle {
@@ -240,7 +234,7 @@
             display: none;
         }
 
-        .task-card.reorder-active .drag-handle {
+        .task-card.reorder-mode .drag-handle {
             display: inline-block;
         }
 
@@ -483,12 +477,12 @@
     <!-- المحتوى الرئيسي -->
     <main>
         <div id="reorderBanner" class="reorder-banner hidden" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
-    <span>وضع الترتيب والتعديل مفعّل</span>
-    <div style="display: flex; gap: 8px;">
-        <button onclick="editCurrentTask()" class="btn-add-task" style="padding: 4px 10px; font-size: 0.8rem; background: var(--primary);">✏️ تعديل</button>
-        <button onclick="cancelReorder()" class="btn-theme-toggle" style="padding: 4px 10px; font-size: 0.8rem; color: #f43f5e; border-color: #f43f5e;">✕ إلغاء</button>
-    </div>
-</div>
+            <span>وضع الترتيب والتعديل مفعّل</span>
+            <div style="display: flex; gap: 8px;">
+                <button onclick="editCurrentTask()" class="btn-add-task" style="padding: 4px 10px; font-size: 0.8rem; background: var(--primary);">✏️ تعديل</button>
+                <button onclick="cancelReorder()" class="btn-theme-toggle" style="padding: 4px 10px; font-size: 0.8rem; color: #f43f5e; border-color: #f43f5e;">✕ إلغاء</button>
+            </div>
+        </div>
 
         <section>
             <div class="section-header">
@@ -632,6 +626,7 @@
         }
 
         function toggleComplete(id) {
+            if (isReordering) return;
             const task = tasks.find(t => t.id === id);
             if (task) {
                 task.completed = !task.completed;
@@ -673,23 +668,17 @@
                 touchStartY = e.touches[0].clientY;
             }
 
+            clearTimeout(longPressTimer);
             longPressTimer = setTimeout(() => {
                 isReordering = true;
                 draggedTaskId = id;
                 if (navigator.vibrate) navigator.vibrate(50);
                 renderTasks();
-            }, 1000);
+            }, 700);
         }
 
         function handleCancelPress(e) {
-            if (e.type === 'touchmove') {
-                const touchY = e.touches[0].clientY;
-                if (Math.abs(touchY - touchStartY) > 10 && !isReordering) {
-                    clearTimeout(longPressTimer);
-                }
-            } else {
-                clearTimeout(longPressTimer);
-            }
+            clearTimeout(longPressTimer);
         }
 
         function handleDragStart(e, id) {
@@ -711,12 +700,19 @@
         function handleDrop(e, targetId) {
             if (!isReordering || !draggedTaskId) return;
             e.preventDefault();
-            
             reorderTasks(draggedTaskId, targetId);
         }
 
         function handleTouchMove(e) {
-            if (!isReordering) return;
+            const touchY = e.touches[0].clientY;
+            // إبطال المؤقت إذا قام المستخدم بالسحب لأعلى أو لأسفل للتصفح قبل تفعيل الترتيب
+            if (!isReordering) {
+                if (Math.abs(touchY - touchStartY) > 8) {
+                    clearTimeout(longPressTimer);
+                }
+                return;
+            }
+
             e.preventDefault();
             const touch = e.touches[0];
             const element = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -744,8 +740,6 @@
                 tasks.splice(mainToIndex, 0, movedItem);
 
                 saveTasks();
-                isReordering = false;
-                draggedTaskId = null;
                 renderTasks();
             }
         }
@@ -776,34 +770,32 @@
                 : secondaries.map((t, index) => createCard(t, index + 1)).join('');
         }
 
-        // دالة إلغاء وضع الترتيب عند ضغط زر الإلغاء
-function cancelReorder() {
-    isReordering = false;
-    draggedTaskId = null;
-    renderTasks();
-}
+        function cancelReorder() {
+            isReordering = false;
+            draggedTaskId = null;
+            renderTasks();
+        }
 
-// دالة تعديل المهمة المحددة حالياً
-function editCurrentTask() {
-    if (!draggedTaskId) return;
-    
-    const task = tasks.find(t => t.id === draggedTaskId);
-    if (!task) return;
+        function editCurrentTask() {
+            if (!draggedTaskId) return;
+            
+            const task = tasks.find(t => t.id === draggedTaskId);
+            if (!task) return;
 
-    // إظهار نافذة إدخال لتعديل اسم المهمة
-    const newTitle = prompt("تعديل اسم المهمة:", task.title);
-    if (newTitle !== null && newTitle.trim() !== "") {
-        task.title = newTitle.trim();
-        saveTasks();
-        isReordering = false;
-        draggedTaskId = null;
-        renderTasks();
-    }
-}
+            const newTitle = prompt("تعديل اسم المهمة:", task.title);
+            if (newTitle !== null && newTitle.trim() !== "") {
+                task.title = newTitle.trim();
+                saveTasks();
+                isReordering = false;
+                draggedTaskId = null;
+                renderTasks();
+            }
+        }
 
         function createCard(t, rank) {
+            const isTarget = isReordering && t.id === draggedTaskId;
             return `
-                <div class="task-card ${t.type} ${t.completed ? 'completed' : ''} ${isReordering ? 'reorder-active' : ''}"
+                <div class="task-card ${t.type} ${t.completed ? 'completed' : ''} ${isTarget ? 'reorder-active' : ''} ${isReordering ? 'reorder-mode' : ''}"
                      data-id="${t.id}"
                      draggable="${isReordering}"
                      onmousedown="handleStartPress(event, '${t.id}')"
