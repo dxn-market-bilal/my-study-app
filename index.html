@@ -10,7 +10,12 @@
     <meta name="theme-color" content="#080d1a">
     <link rel="apple-touch-icon" href="icon-192.png">
 
-    <!-- تطبيق الوضع الفاتح فوراً قبل رسم الصفحة لمنع الوميض الأسود -->
+    <!-- مكتبات Firebase الأساسية -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <!-- تطبيق الوضع الفاتح فوراً قبل رسم الصفحة منعاً للوميض -->
     <script>
         if (localStorage.getItem('study_app_theme') === 'light') {
             document.documentElement.classList.add('light-theme');
@@ -80,27 +85,27 @@
         }
 
         .logo {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 900;
             color: var(--primary);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .header-actions {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .btn-add-task {
             background-color: var(--primary);
             color: #080d1a;
             border: none;
-            padding: 8px 16px;
+            padding: 8px 14px;
             border-radius: 12px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 900;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25);
@@ -456,9 +461,12 @@
     <header>
         <div class="logo">
             <span>📚</span>
-            <span>جدول الأولويات الدراسية</span>
+            <span>جدول الأولويات</span>
         </div>
         <div class="header-actions">
+            <button id="googleAuthBtn" onclick="handleGoogleAuth()" class="btn-theme-toggle">
+                <span id="authIcon">🌐</span> <span id="authText">حفظ بالحساب</span>
+            </button>
             <button onclick="openAddModal()" class="btn-add-task">+ مهمة</button>
             <button id="themeToggleBtn" onclick="toggleTheme()" class="btn-theme-toggle">
                 <span id="themeIcon">🌙</span>
@@ -513,7 +521,7 @@
         </div>
     </div>
 
-    <!-- النافذة المنبثقة لتعديل المهمة (تطبيقات الويب المصممة) -->
+    <!-- النافذة المنبثقة لتعديل المهمة -->
     <div id="editModalOverlay" class="modal-overlay hidden" onclick="handleBackdropClick(event, 'editModalOverlay')">
         <div class="modal-card">
             <div class="modal-header">
@@ -548,15 +556,45 @@
     </div>
 
     <script>
+        // مفاتيح مشروعك المأخوذة من الكونسول مباشرة
+        const firebaseConfig = {
+            apiKey: "AIzaSyAQDp9EFKLRkjM1T54kQytIDzajBGWgdfU",
+            authDomain: "study-planner-ac709.firebaseapp.com",
+            projectId: "study-planner-ac709",
+            storageBucket: "study-planner-ac709.firebasestorage.app",
+            messagingSenderId: "1033544531613",
+            appId: "1:1033544531613:web:89ea2e20e1d886c8a19e74",
+            measurementId: "G-6NZMD4G8TC"
+        };
+
+        // تهيئة الخدمات
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
         let tasks = [];
         let selectedType = 'essential';
         let taskToDeleteId = null;
         let taskToEditId = null;
+        let currentUser = null;
 
         let longPressTimer = null;
         let isReordering = false;
         let draggedTaskId = null;
         let touchStartY = 0;
+
+        // مراقبة تسجيل الدخول
+        auth.onAuthStateChanged(async (user) => {
+            const authText = document.getElementById('authText');
+            if (user) {
+                currentUser = user;
+                authText.innerText = user.displayName ? user.displayName.split(' ')[0] : "حسابي";
+                await syncTasksWithCloud();
+            } else {
+                currentUser = null;
+                authText.innerText = "حفظ بالحساب";
+            }
+        });
 
         window.onload = function() {
             const savedTheme = localStorage.getItem('study_app_theme');
@@ -576,14 +614,54 @@
             renderTasks();
         };
 
-        function getFormattedDate() {
-            const now = new Date();
-            const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-            return `${now.getDate()} ${months[now.getMonth()]}`;
+        function handleGoogleAuth() {
+            if (currentUser) {
+                if (confirm("هل ترغب في تسجيل الخروج من حسابك؟")) {
+                    auth.signOut().then(() => {
+                        location.reload();
+                    });
+                }
+            } else {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                auth.signInWithPopup(provider).catch((error) => {
+                    alert("حدث خطأ أثناء تسجيل الدخول: " + error.message);
+                });
+            }
+        }
+
+        async function syncTasksWithCloud() {
+            if (!currentUser) return;
+
+            const userDocRef = db.collection('user_tasks').doc(currentUser.uid);
+            const doc = await userDocRef.get();
+
+            if (doc.exists) {
+                tasks = doc.data().tasksList || [];
+                localStorage.setItem('study_priorities_v5', JSON.stringify(tasks));
+                renderTasks();
+            } else {
+                await userDocRef.set({
+                    tasksList: tasks,
+                    lastUpdated: new Date()
+                });
+            }
         }
 
         function saveTasks() {
             localStorage.setItem('study_priorities_v5', JSON.stringify(tasks));
+
+            if (currentUser) {
+                db.collection('user_tasks').doc(currentUser.uid).set({
+                    tasksList: tasks,
+                    lastUpdated: new Date()
+                }).catch(err => console.error("خطأ في الحفظ السحابي:", err));
+            }
+        }
+
+        function getFormattedDate() {
+            const now = new Date();
+            const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+            return `${now.getDate()} ${months[now.getMonth()]}`;
         }
 
         function toggleTheme() {
@@ -635,7 +713,6 @@
             closeAddModal();
         }
 
-        /* دوال نافذة التعديل المنبثقة المصممة */
         function editCurrentTask() {
             if (!draggedTaskId) return;
             const task = tasks.find(t => t.id === draggedTaskId);
@@ -864,7 +941,7 @@
         }
     </script>
 
-    <!-- تسجيل الـ Service Worker لتفعيل الـ PWA -->
+    <!-- تسجيل Service Worker للـ PWA -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
