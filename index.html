@@ -217,11 +217,11 @@
         .task-card.completed { opacity: 0.45; }
 
         .task-card.reorder-active {
-            border-style: dashed;
-            border-color: var(--primary);
-            cursor: grab;
-            animation: shake 0.3s ease-in-out infinite alternate;
-        }
+    border: 2px dashed var(--primary);
+    box-shadow: 0 0 18px rgba(56, 189, 248, 0.4); /* ظل مشع حول المهمة */
+    transform: scale(1.02); /* بروز بسيط للمهمة المحددة */
+    animation: shake 0.3s ease-in-out infinite alternate;
+}
 
         .task-card.dragging {
             opacity: 0.3;
@@ -482,9 +482,13 @@
 
     <!-- المحتوى الرئيسي -->
     <main>
-        <div id="reorderBanner" class="reorder-banner hidden">
-             وضع الترتيب مفعّل: اسحب المهمة للمكان الجديد للتغيير!
-        </div>
+        <div id="reorderBanner" class="reorder-banner hidden" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+    <span>وضع الترتيب والتعديل مفعّل</span>
+    <div style="display: flex; gap: 8px;">
+        <button onclick="editCurrentTask()" class="btn-add-task" style="padding: 4px 10px; font-size: 0.8rem; background: var(--primary);">✏️ تعديل</button>
+        <button onclick="cancelReorder()" class="btn-theme-toggle" style="padding: 4px 10px; font-size: 0.8rem; color: #f43f5e; border-color: #f43f5e;">✕ إلغاء</button>
+    </div>
+</div>
 
         <section>
             <div class="section-header">
@@ -674,7 +678,7 @@
                 draggedTaskId = id;
                 if (navigator.vibrate) navigator.vibrate(50);
                 renderTasks();
-            }, 500);
+            }, 1000);
         }
 
         function handleCancelPress(e) {
@@ -772,6 +776,31 @@
                 : secondaries.map((t, index) => createCard(t, index + 1)).join('');
         }
 
+        // دالة إلغاء وضع الترتيب عند ضغط زر الإلغاء
+function cancelReorder() {
+    isReordering = false;
+    draggedTaskId = null;
+    renderTasks();
+}
+
+// دالة تعديل المهمة المحددة حالياً
+function editCurrentTask() {
+    if (!draggedTaskId) return;
+    
+    const task = tasks.find(t => t.id === draggedTaskId);
+    if (!task) return;
+
+    // إظهار نافذة إدخال لتعديل اسم المهمة
+    const newTitle = prompt("تعديل اسم المهمة:", task.title);
+    if (newTitle !== null && newTitle.trim() !== "") {
+        task.title = newTitle.trim();
+        saveTasks();
+        isReordering = false;
+        draggedTaskId = null;
+        renderTasks();
+    }
+}
+
         function createCard(t, rank) {
             return `
                 <div class="task-card ${t.type} ${t.completed ? 'completed' : ''} ${isReordering ? 'reorder-active' : ''}"
@@ -795,7 +824,7 @@
                         </div>
                         <div class="task-text">
                             <h3>${escapeHtml(t.title)}</h3>
-                            <div class="date-text">* ${escapeHtml(t.date || getFormattedDate())}</div>
+                            <div class="date-text">${escapeHtml(t.date || getFormattedDate())}</div>
                         </div>
                     </div>
                     
