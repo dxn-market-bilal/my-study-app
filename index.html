@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#080d1a">
     <link rel="apple-touch-icon" href="icon-192.png">
 
-    <!-- تطبيق الوضع الفاتح فوراً قبل رسم الصفحة لمنع الوميض الأسود عند الريفرش -->
+    <!-- تطبيق الوضع الفاتح فوراً قبل رسم الصفحة لمنع الوميض الأسود -->
     <script>
         if (localStorage.getItem('study_app_theme') === 'light') {
             document.documentElement.classList.add('light-theme');
@@ -180,7 +180,7 @@
         }
 
         .reorder-banner {
-            background-color: rgba(56, 189, 248, 0.15);
+            background-color: rgba(56, 189, 248, 0.12);
             border: 1px dashed var(--primary);
             color: var(--primary);
             padding: 10px 14px;
@@ -188,13 +188,6 @@
             font-size: 0.85rem;
             font-weight: bold;
             text-align: center;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 0.7; }
-            50% { opacity: 1; }
-            100% { opacity: 0.7; }
         }
 
         .task-card {
@@ -217,13 +210,12 @@
         .task-card.completed { opacity: 0.45; }
 
         .task-card.reorder-active {
-            border: 2px dashed var(--primary);
-            box-shadow: 0 0 18px rgba(56, 189, 248, 0.4);
-            transform: scale(1.02);
+            border: 2px solid var(--primary);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
         }
 
         .task-card.dragging {
-            opacity: 0.3;
+            opacity: 0.4;
         }
 
         .drag-handle {
@@ -521,6 +513,23 @@
         </div>
     </div>
 
+    <!-- النافذة المنبثقة لتعديل المهمة (تطبيقات الويب المصممة) -->
+    <div id="editModalOverlay" class="modal-overlay hidden" onclick="handleBackdropClick(event, 'editModalOverlay')">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>تعديل المهمة ✏️</h2>
+                <button class="btn-close-modal" onclick="closeEditModal()">✕</button>
+            </div>
+            <div class="form-group">
+                <input type="text" id="editTaskTitle" placeholder="عنوان المهمة الجديد..." onkeypress="handleEditKeyPress(event)">
+                <div class="modal-actions">
+                    <button onclick="saveTaskEdit()" class="btn-submit">حفظ التعديل</button>
+                    <button onclick="closeEditModal()" class="btn-cancel">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- النافذة المنبثقة لتأكيد الحذف -->
     <div id="deleteModalOverlay" class="modal-overlay hidden" onclick="handleBackdropClick(event, 'deleteModalOverlay')">
         <div class="modal-card">
@@ -542,6 +551,7 @@
         let tasks = [];
         let selectedType = 'essential';
         let taskToDeleteId = null;
+        let taskToEditId = null;
 
         let longPressTimer = null;
         let isReordering = false;
@@ -625,6 +635,44 @@
             closeAddModal();
         }
 
+        /* دوال نافذة التعديل المنبثقة المصممة */
+        function editCurrentTask() {
+            if (!draggedTaskId) return;
+            const task = tasks.find(t => t.id === draggedTaskId);
+            if (!task) return;
+
+            taskToEditId = draggedTaskId;
+            const input = document.getElementById('editTaskTitle');
+            input.value = task.title;
+            document.getElementById('editModalOverlay').classList.remove('hidden');
+            setTimeout(() => input.focus(), 100);
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModalOverlay').classList.add('hidden');
+            taskToEditId = null;
+        }
+
+        function saveTaskEdit() {
+            if (!taskToEditId) return;
+            const input = document.getElementById('editTaskTitle');
+            const newTitle = input.value.trim();
+            if (newTitle) {
+                const task = tasks.find(t => t.id === taskToEditId);
+                if (task) {
+                    task.title = newTitle;
+                    saveTasks();
+                    renderTasks();
+                }
+            }
+            closeEditModal();
+            cancelReorder();
+        }
+
+        function handleEditKeyPress(event) {
+            if (event.key === 'Enter') saveTaskEdit();
+        }
+
         function toggleComplete(id) {
             if (isReordering) return;
             const task = tasks.find(t => t.id === id);
@@ -657,6 +705,7 @@
         function handleBackdropClick(event, modalId) {
             if (event.target.id === modalId) {
                 if (modalId === 'addModalOverlay') closeAddModal();
+                if (modalId === 'editModalOverlay') closeEditModal();
                 if (modalId === 'deleteModalOverlay') closeDeleteModal();
             }
         }
@@ -705,7 +754,6 @@
 
         function handleTouchMove(e) {
             const touchY = e.touches[0].clientY;
-            // إبطال المؤقت إذا قام المستخدم بالسحب لأعلى أو لأسفل للتصفح قبل تفعيل الترتيب
             if (!isReordering) {
                 if (Math.abs(touchY - touchStartY) > 8) {
                     clearTimeout(longPressTimer);
@@ -774,22 +822,6 @@
             isReordering = false;
             draggedTaskId = null;
             renderTasks();
-        }
-
-        function editCurrentTask() {
-            if (!draggedTaskId) return;
-            
-            const task = tasks.find(t => t.id === draggedTaskId);
-            if (!task) return;
-
-            const newTitle = prompt("تعديل اسم المهمة:", task.title);
-            if (newTitle !== null && newTitle.trim() !== "") {
-                task.title = newTitle.trim();
-                saveTasks();
-                isReordering = false;
-                draggedTaskId = null;
-                renderTasks();
-            }
         }
 
         function createCard(t, rank) {
